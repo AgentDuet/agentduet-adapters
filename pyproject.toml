@@ -1,0 +1,75 @@
+[build-system]
+requires = ["uv_build>=0.9.21,<0.10.0"]
+build-backend = "uv_build"
+
+[project]
+name = "agentduet-adapters"
+version = "0.1.0b1"
+description = "Model adapters for the AgentDuet VoiceAgent layer: Gemini Live, xAI Grok Voice, Alibaba Qwen-Omni, Amazon Nova Sonic"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [
+    {name = "AgentDuet"}
+]
+keywords = ["voice-agent", "speech-to-speech", "realtime", "telephony", "ai", "gemini", "grok", "qwen", "nova-sonic"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+]
+
+# The SDK is the only hard dependency: it provides the seam every adapter implements
+# (VoiceModel / ModelSession and the event types). The floor is the first release that
+# exports it; on an older SDK the imports fail at import time with a clear ImportError
+# rather than misbehaving at call time.
+dependencies = [
+    "agentduet>=1.0.0b10",
+]
+
+[project.urls]
+Homepage = "https://agentduet.com"
+Repository = "https://github.com/AgentDuet/agentduet-adapters"
+
+# One extra per provider: install only the model you actually call. Nothing is pulled in by
+# default, so a Nova Sonic deployment never ships google-genai. Floors are the versions each
+# adapter was validated against.
+[project.optional-dependencies]
+gemini = ["google-genai>=1.70.0"]
+# GrokVoice needs only a WebSocket client, which agentduet already depends on. The extra
+# exists so every adapter has one and `[grok]` never becomes a typo that installs nothing.
+grok = []
+qwen = ["soxr>=1.1", "numpy>=2.0"]
+nova-sonic = ["aws-sdk-bedrock-runtime>=0.7", "smithy-aws-core>=0.7"]
+all = [
+    "agentduet-adapters[gemini]",
+    "agentduet-adapters[grok]",
+    "agentduet-adapters[qwen]",
+    "agentduet-adapters[nova-sonic]",
+]
+# For running examples/ (they read credentials from a .env file).
+examples = ["python-dotenv>=1.0"]
+
+[tool.pytest.ini_options]
+timeout = 30
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-timeout>=2.3",
+    # Pinned below 0.16 to match the SDK repo: 0.16 widens the default rule set, so an
+    # unpinned ruff would report findings here that the same code passes there.
+    "ruff>=0.15.20,<0.16",
+    "ty>=0.0.14",
+]
