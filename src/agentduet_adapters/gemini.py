@@ -82,12 +82,14 @@ class GeminiLive(VoiceModel):
         model: str = DEFAULT_MODEL,
         api_key: Optional[str] = None,
         greeting: str = GREETING,
+        max_output_tokens: int = 8192,
     ):
         self._instruction = persona if persona is not None else instruction
         self._tool_declarations = tools or []
         self._voice = voice
         self._model = model
         self._greeting = greeting
+        self._max_output_tokens = max_output_tokens
         self._client = genai.Client(vertexai=False, api_key=api_key or os.getenv("GEMINI_API_KEY"))
 
     def _live_config(self):
@@ -108,6 +110,13 @@ class GeminiLive(VoiceModel):
             system_instruction=types.Content(parts=[types.Part(text=self._instruction)]),
             input_audio_transcription=types.AudioTranscriptionConfig(),
             output_audio_transcription=types.AudioTranscriptionConfig(),
+            # Audio generation and the output_audio_transcription text draw from separate
+            # budgets server-side: leaving this unset silently truncates the TRANSCRIPT
+            # partway through a longer reply (confirmed ~20-25 words) while the AUDIO keeps
+            # playing in full regardless. Callers never notice; anything reading
+            # TranscriptDelta (logging, guardrails) silently loses the back of every long
+            # reply. 8192 is comfortably more than a phone-call turn needs.
+            max_output_tokens=self._max_output_tokens,
             tools=tools,
         )
 
